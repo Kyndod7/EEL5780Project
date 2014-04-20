@@ -77,7 +77,7 @@ public class GraphViz
    /**
     * Where is your dot program located? It will be called externally.
     */
-   private static String DOT = "c:/workplace/EEL5780/simulation/res/graphviz-2.38/bin/dot.exe";
+   private static String DOT = "res/graphviz-2.38/bin/dot.exe";
 
    /**
     * The source of the graph written in dot language.
@@ -185,11 +185,11 @@ public class GraphViz
       byte[] img_stream = null;
 
       try {
-         img = File.createTempFile("graph_", "."+type, new File(GraphViz.TEMP_DIR));
+         img = File.createTempFile("graph_", "." + type, new File(GraphViz.TEMP_DIR));
          Runtime rt = Runtime.getRuntime();
          
          // patch by Mike Chenault
-         String[] args = {DOT, "-T"+type, dot.getAbsolutePath(), "-o", img.getAbsolutePath()};
+         String[] args = {DOT, "-T" + type, dot.getAbsolutePath(), "-o", img.getAbsolutePath()};
          Process p = rt.exec(args);
          
          p.waitFor();
