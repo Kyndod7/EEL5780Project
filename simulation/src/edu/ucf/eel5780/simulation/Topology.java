@@ -36,7 +36,7 @@ public class Topology {
 		
 		GraphViz graphViz = print();
 		LOGGER.finer(graphViz.getDotSource());
-		printToImage();
+//		printToImage();
 	}
 	
 	private void generate(HashMap<Integer, Node> nodeHash) {
@@ -90,18 +90,35 @@ public class Topology {
 		}
 		return node;
 	}
+	
+	public int getNumberOfNodes() {
+		return nodeList.size();
+	}
+	
+	public int getNumberOfDataSinks() {
+		int numDataSinks = 0;
+		for(Node node : nodeList) {
+			if(node.isDataSink()) {
+				numDataSinks++;
+			}
+		}
+		return numDataSinks;
+	}
 
 	public void tick() {
 		List<Node> nodes = this.nodeList;
 		List<Node> eventNodes = new ArrayList<Node>();
 		
 		// prevents nodes that gained packets during this tick to sent it out immediately
-		for (Node node : nodes)
-			if(!node.isBufferEmpty())
+		for (Node node : nodes) {
+			if(!node.isBufferEmpty()) {
 				eventNodes.add(node);
+			}
+			node.tick();
+		}
 		
 		for (Node eventNode : eventNodes)
-			eventNode.tick();
+			eventNode.sendPacket();
 	}
 	
 	public void printToConsole() {

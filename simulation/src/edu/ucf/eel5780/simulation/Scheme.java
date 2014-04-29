@@ -10,6 +10,7 @@ public class Scheme {
 	
 	public Node selectNeighbor(List<Node> neighbors) {
 		//TODO implement, handle 0 neightbors
+		//TODO if any of neighbors sink send to it?
 		if(neighbors.size() == 0) {
 			return null;
 		}

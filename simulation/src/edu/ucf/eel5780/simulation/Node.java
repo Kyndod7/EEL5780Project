@@ -14,6 +14,7 @@ public class Node {
 	private Scheme scheme;
 	private int bufferSize;
 	private double packetGenProp;
+	private double reception;
 	private LinkedList<Node> neighbors;
 	private LinkedList<Packet> buffer;
 	
@@ -23,30 +24,8 @@ public class Node {
 		initialize();
 	}
 	
-	private void initialize() {
-		SimProperties properties = SimProperties.getInstance();
-		this.bufferSize = properties.getNodeBufferSize();
-		this.packetGenProp = properties.getNodePacketGenProb();
-		this.neighbors = new LinkedList<Node>();
-		this.buffer = new LinkedList<Packet>();
-	}
-	
 	public void addNeighbor(Node neighbor) {
 		neighbors.add(neighbor);
-	}
-	
-	public void addPacket(Packet packet) {
-		// data sinks do not forward or generate packets
-		if (isDataSink()) {
-			return;
-		}
-		// check weather to dropped the packet
-		if (getBufferStatus() >= bufferSize) {
-			return;
-		}
-		// enqueues packet
-		buffer.add(packet);
-		LOGGER.fine("Node " + getNumber() + " added packet"); 
 	}
 	
 	public int getBufferStatus() {
@@ -68,7 +47,11 @@ public class Node {
 	}
 	
 	public int getNumber() {
-		return nodeNumber;
+		return this.nodeNumber;
+	}
+	
+	public double getReception() {
+		return this.reception;
 	}
 	
 	public boolean isBufferEmpty() {
@@ -85,37 +68,80 @@ public class Node {
 		return false;
 	}
 	
-	public void tick() {
-		// data sinks do not forward or generate packets
+	public void receivePacket(Packet packet) {
+		LOGGER.fine("Node" + getNumber() + " received packet " + packet.getId());
+		packet.addHop(getReception());
+		// data sinks do not forward packets
+		if (isDataSink()) {
+			packet.arrive();
+			return;
+		}
+		// enqueues packet
+		addPacket(packet);
+	}
+	
+	/**
+	 * Send next packet in the queue to the BEST neighbor
+	 */
+	public void sendPacket() {
+		// data sinks do not forward packets
 		if (isDataSink()) {
 			return;
 		}
-		//send next packet in the queue to the BEST neighbor
-		sentPacket();
-		//generate packet with probability
-		generatePacket();
-	}
-	
-	private void sentPacket() {
 		if (buffer.size() == 0) {
 			return;
 		}
 		
 		Packet nextPacket = buffer.remove();
-		Node bestNeighbor = getRoute();
-		bestNeighbor.addPacket(nextPacket);
-		LOGGER.fine("Node " + getNumber() + "sent packet"); 
+		Node bestNeighbor = this.scheme.selectNeighbor(this.neighbors);
+		LOGGER.fine("Node" + getNumber() + " sent packet " + nextPacket.getId() + " to Node" + bestNeighbor.getNumber());
+		bestNeighbor.receivePacket(nextPacket); 
 	}
 	
-	private Node getRoute() {
-		return this.scheme.selectNeighbor(this.neighbors);
+	public void tick() {
+		// data sinks do not generate or buffer packets
+		if (isDataSink()) {
+			return;
+		}
+		refreshBuffer();
+		generatePacket();
 	}
 	
+	private void addPacket(Packet packet) {
+		// check weather to dropped the packet
+		if (getBufferStatus() >= bufferSize) {
+			LOGGER.fine("Node" + getNumber() + " dropped packet " + packet.getId()); 
+			packet.drop();
+			return;
+		} 
+		LOGGER.finer("Node" + getNumber() + " added packet " + packet.getId());
+		buffer.add(packet);
+	}
+	
+	/**
+	 * Generate packet with probability.
+	 */
 	private void generatePacket() {
 		double random = Math.random();
 		if (random < packetGenProp) {
-			addPacket(new Packet());
-			LOGGER.fine("Node " + getNumber() + " generated a packet"); 
+			Packet newPacket = Packet.getInstance();
+			LOGGER.fine("Node" + getNumber() + " generated packet " + newPacket.getId()); 
+			addPacket(newPacket);
+		}
+	}
+	
+	private void initialize() {
+		SimProperties properties = SimProperties.getInstance();
+		this.bufferSize = properties.getNodeBufferSize();
+		this.packetGenProp = properties.getNodePacketGenProb();
+		this.neighbors = new LinkedList<Node>();
+		this.buffer = new LinkedList<Packet>();
+		this.reception = Math.random();
+	}
+	
+	private void refreshBuffer() {
+		for(Packet packet : buffer) {
+			packet.tick();
 		}
 	}
 
